@@ -1,6 +1,10 @@
 # Normalize text to LF in the repo across Windows / macOS / Linux.
 * text=auto
 
+# Committed game builds are binary — never apply text/EOL conversion (would corrupt
+# .dll/.exe/.assets, or CRLF-mangle files inside a mac .app bundle).
+game/** binary
+
 # Shell scripts MUST be LF or bash on macOS/Linux fails with $'\r' errors.
 *.sh       text eol=lf
 *.bash     text eol=lf

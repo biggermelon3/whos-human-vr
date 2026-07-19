@@ -41,13 +41,19 @@ sysinfo.txt
 *.aab
 *.app
 *.unitypackage
-# Packaged standalone builds (large binaries — distribute outside git)
+# Raw Unity build OUTPUT folders (huge, ~1.7GB — the shippable copy lives in /game/)
 UnityVr/WindowsBuild/
 UnityVr/MacBuild/
 UnityVr/**/Builds/
-# A build dropped next to the launchers for one-click play (see play-file-mode.*)
-/game/
 who-is-human/game/
+# The launcher-ready build committed under /game/ IS tracked — re-include it here,
+# AFTER the generic *.app rule above (which would otherwise drop a mac .app build).
+!/game/
+!/game/**
+# ...but NEVER commit Unity's debug-symbol folders, even inside /game/ (600MB+, and
+# GitHub rejects files >100MB). LAST so they win everywhere, /game/ included.
+**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+**/*_BurstDebugInformation_DoNotShip/
 
 # Debug screenshots (regenerable — see Assets/Screenshots)
 UnityVr/WhosHuman/Assets/Screenshots/
