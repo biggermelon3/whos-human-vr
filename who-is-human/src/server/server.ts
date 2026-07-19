@@ -36,12 +36,12 @@ function broadcast(e: Record<string, unknown>): void {
 }
 
 function startGame(
-  opts: { seed?: number; humanId?: PlayerId; backend?: string; maxDays?: number; locale?: string; apiKey?: string } = {},
+  opts: { seed?: number; humanId?: PlayerId; backend?: string; maxDays?: number; discussionRounds?: number; locale?: string; apiKey?: string } = {},
 ): Session {
   // Request locale wins; else the server's WIH_LOCALE env; else English.
   const envLocale = process.env["WIH_LOCALE"];
   const locale = isLocale(opts.locale) ? opts.locale : isLocale(envLocale) ? envLocale : "en";
-  const state = createGame({ seed: opts.seed, humanId: opts.humanId, maxDays: opts.maxDays, locale });
+  const state = createGame({ seed: opts.seed, humanId: opts.humanId, maxDays: opts.maxDays, discussionRounds: opts.discussionRounds, locale });
   const human = new HumanWebProvider();
   const backend = resolveBackend(opts.backend);
   // opts.apiKey is the BYOK Anthropic key — passed straight to the provider, never logged/stored to disk.
@@ -135,9 +135,9 @@ app.post("/api/observe", (req, res) => {
 // Start / restart a game. `apiKey` (optional) is the player's BYOK Anthropic key:
 // used only to construct this game's AI provider, never logged or echoed back.
 app.post("/api/new", (req, res) => {
-  const { seed, humanId, backend, maxDays, locale, apiKey } = req.body ?? {};
+  const { seed, humanId, backend, maxDays, discussionRounds, locale, apiKey } = req.body ?? {};
   const key = typeof apiKey === "string" ? apiKey : undefined;
-  const s = startGame({ seed, humanId, backend, maxDays, locale, apiKey: key });
+  const s = startGame({ seed, humanId, backend, maxDays, discussionRounds, locale, apiKey: key });
   // NOTE: the response deliberately does not include the key.
   res.json({ ok: true, humanId: s.state.humanId, seed: s.state.config.seed, backend: s.backend, locale: s.state.config.locale });
 });

@@ -29,8 +29,8 @@ $inbox = Join-Path $base "inbox"
 $outbox = Join-Path $base "outbox"
 New-Item -ItemType Directory -Force -Path $inbox, $outbox | Out-Null
 
-$sys = "You are an AI agent in a social-deduction (werewolf/mafia) game. You receive a decision-request JSON. Respond with ONLY one valid JSON object matching the fields in its responseHint. No markdown fences, no prose, no explanation."
-$instr = "Read the decision-request JSON from input and reply with ONLY the JSON object described by its responseHint field. Stay in character as your agent profile. No fences, no prose."
+$sys = "You are a player in a social-deduction (werewolf/mafia) game. You receive a decision-request JSON. Respond with ONLY one valid JSON object matching the fields in its responseHint. No markdown fences, no prose, no explanation."
+$instr = "Read the decision-request JSON from input. FOLLOW its 'guidance' field: play to WIN the werewolf game -- discuss ONLY suspects, role claims, and votes; you have no persona and never go off-topic. Reply with ONLY the JSON object described by its responseHint. No fences, no prose."
 
 function Get-JsonBlock([string]$text) {
   if ([string]::IsNullOrWhiteSpace($text)) { return "{}" }

@@ -12,8 +12,14 @@
 param(
   [ValidateSet("claude", "codex", "gemini")][string]$Cli = "claude",
   [string]$Model = "",
-  [string]$Workspace = "agent-workspace"
+  [string]$Workspace = ""
 )
+# Default to the repo-root agent-workspace (…\who-is-human\agent-workspace), the
+# SAME folder the server writes to (src/agents/factory.ts anchors there too).
+# Resolve to an absolute path so each spawned runner's own CWD can't shift it.
+if (-not $Workspace) { $Workspace = Join-Path $PSScriptRoot "..\agent-workspace" }
+$Workspace = [System.IO.Path]::GetFullPath($Workspace)
+Write-Host "Workspace: $Workspace" -ForegroundColor DarkGray
 $ids = "A-01", "A-02", "A-03", "A-04", "A-05", "A-06", "A-07"
 $runner = Join-Path $PSScriptRoot "agent-runner.ps1"
 foreach ($id in $ids) {

@@ -69,6 +69,7 @@ namespace Wih
         private Image _connLight;
         private RectTransform _inputRow, _textRow, _menu;
         private TMP_InputField _inputField;
+        private Button _sendBtn, _talkBtn; // the field stays editable always; these only light up on the player's turn
         private ScrollRect _transcriptScroll;
         private Action<string, string> _onSend;
         private readonly List<string> _lines = new List<string>();
@@ -304,17 +305,27 @@ namespace Wih
         private void BuildTextRow(RectTransform crt)
         {
             _textRow = MakeRow(crt, 360, -446, 680, 66);
-            _inputField = MakeInputField(_textRow, "Type your statement, then Send / Enter…");
+            _inputField = MakeInputField(_textRow, "Draft / edit your statement anytime — Send lights up on your turn…");
             var le = _inputField.gameObject.AddComponent<LayoutElement>();
             le.minWidth = 360; le.flexibleWidth = 1f; le.minHeight = 54;
-            MakeButton(_textRow, "Send", new Color(0.16f, 0.4f, 0.26f), SubmitTyped);
-            if (speech != null) MakeButton(_textRow, "Talk (V)", new Color(0.45f, 0.2f, 0.36f), () => ToggleMic(_onSend));
-            _textRow.gameObject.SetActive(false);
+            _sendBtn = MakeButton(_textRow, "Send", new Color(0.16f, 0.4f, 0.26f), SubmitTyped).GetComponent<Button>();
+            if (speech != null) _talkBtn = MakeButton(_textRow, "Talk (V)", new Color(0.45f, 0.2f, 0.36f), () => ToggleMic(_onSend)).GetComponent<Button>();
+            // The row stays active for the whole game so the player can keep typing and
+            // thinking between turns; the opaque start menu covers it until the game
+            // begins. Only the Send/Talk buttons are gated to the player's speaking turn.
+            SetSendEnabled(false);
+        }
+
+        /// <summary>Editable field is always on; Send/Talk are only interactable on the player's turn to speak.</summary>
+        private void SetSendEnabled(bool on)
+        {
+            if (_sendBtn != null) _sendBtn.interactable = on;
+            if (_talkBtn != null) _talkBtn.interactable = on;
         }
 
         private void SubmitTyped()
         {
-            if (_onSend == null) return;
+            if (_onSend == null) return; // not the player's turn — keep the draft, send nothing
             string t = _inputField != null ? _inputField.text : "";
             _onSend(t, _lean);
             if (_inputField != null) _inputField.text = "";
@@ -426,7 +437,7 @@ namespace Wih
         {
             _instruction.text = instruction;
             _onSend = null;
-            if (_textRow != null) _textRow.gameObject.SetActive(false);
+            SetSendEnabled(false); // pick a target with the buttons; field stays open for drafting
             ClearRow();
             foreach (var t in targets) { var id = t; MakeButton(_inputRow, id, new Color(0.16f, 0.3f, 0.45f), () => onPick(id)); }
             if (canAbstain) MakeButton(_inputRow, "abstain", new Color(0.3f, 0.3f, 0.3f), () => onPick("abstain"));
@@ -437,7 +448,7 @@ namespace Wih
             _instruction.text = instruction;
             _onSend = onSend;
             _lean = "abstain";
-            if (_textRow != null) _textRow.gameObject.SetActive(true);
+            SetSendEnabled(true); // your turn — Send/Talk go live (the draft you already typed is ready to send)
             ClearRow();
             if (isOpening && leanTargets != null)
             {
@@ -456,7 +467,7 @@ namespace Wih
         {
             if (_instruction) _instruction.text = "";
             _onSend = null;
-            if (_textRow != null) _textRow.gameObject.SetActive(false);
+            SetSendEnabled(false); // between turns: keep the field editable, just can't send yet
             ClearRow();
         }
 

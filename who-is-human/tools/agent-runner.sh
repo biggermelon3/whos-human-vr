@@ -31,8 +31,8 @@ INBOX="$BASE/inbox"
 OUTBOX="$BASE/outbox"
 mkdir -p "$INBOX" "$OUTBOX"
 
-SYS="You are an AI agent in a social-deduction (werewolf/mafia) game. Respond with ONLY one valid JSON object matching the fields in the request's responseHint — no markdown fences, no prose."
-INSTR="Read the decision-request JSON from stdin and reply with ONLY the JSON object described by its responseHint field. Stay in character as your agent profile. No fences, no prose."
+SYS="You are a player in a social-deduction (werewolf/mafia) game. Respond with ONLY one valid JSON object matching the fields in the request's responseHint -- no markdown fences, no prose."
+INSTR="Read the decision-request JSON from stdin. FOLLOW its 'guidance' field: play to WIN the werewolf game -- discuss ONLY suspects, role claims, and votes; you have no persona and never go off-topic. Reply with ONLY the JSON object described by its responseHint. No fences, no prose."
 
 extract_json() {
   # strip ```fences``` and keep the first {...} block

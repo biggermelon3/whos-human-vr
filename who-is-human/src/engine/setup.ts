@@ -27,7 +27,10 @@ export function createGame(opts: NewGameOptions = {}): GameState {
   const config: Config = {
     seed,
     maxDays: opts.maxDays ?? 5,
-    discussionRounds: opts.discussionRounds ?? 2,
+    // One open-discussion pass by default: each living player speaks exactly once
+    // in free discussion (plus one opening statement earlier). Keeps a day short
+    // and readable in VR; raise via NewGameOptions / POST /api/new to lengthen it.
+    discussionRounds: opts.discussionRounds ?? 1,
     locale: opts.locale ?? "en",
   };
   const rng = makeRng(seed);

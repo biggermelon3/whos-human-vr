@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import type { GameState, PlayerId } from "../domain/types.js";
 import type { AgentProvider } from "./provider.js";
 import { DemoAgentProvider } from "./demoProvider.js";
@@ -46,7 +48,13 @@ export function buildProviders(
     }
   }
 
-  const workspace = process.env["WIH_AGENT_WORKSPACE"] ?? "./agent-workspace";
+  // Anchor the file-backend mailbox to the repo-root `agent-workspace` using THIS
+  // module's location (…/src|dist/agents/factory → ../../agent-workspace), never
+  // process.cwd(). tools/start-all-agents anchors the runners to the same folder,
+  // so requests and replies always meet regardless of where each side was launched.
+  const workspace =
+    process.env["WIH_AGENT_WORKSPACE"] ??
+    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "agent-workspace");
   const providers = new Map<PlayerId, AgentProvider>();
   for (const p of state.players) {
     if (p.id === state.humanId) {

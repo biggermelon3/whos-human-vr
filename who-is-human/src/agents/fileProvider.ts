@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync } from "node:fs";
+import { mkdirSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { readFile, writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
 import type { AgentProvider, DecisionRequest, DecisionResponse } from "./provider.js";
@@ -30,8 +30,24 @@ export class FileAgentProvider implements AgentProvider {
     this.outbox = join(base, "outbox");
     mkdirSync(this.inbox, { recursive: true });
     mkdirSync(this.outbox, { recursive: true });
+    // Clear stale turn files from a previous game so decide() never replays an
+    // old reply — turn numbering restarts at 001 every game, so a leftover
+    // outbox/turn-001.json would be picked up instantly (no runner needed).
+    this.clearStale(this.inbox);
+    this.clearStale(this.outbox);
     this.timeoutMs = opts.timeoutMs ?? Number(process.env["WIH_FILE_TIMEOUT_MS"] ?? 180000);
     this.pollMs = opts.pollMs ?? 500;
+  }
+
+  /** Remove leftover turn-*.json from a prior game. */
+  private clearStale(dir: string): void {
+    try {
+      for (const f of readdirSync(dir)) {
+        if (f.startsWith("turn-")) rmSync(join(dir, f), { force: true });
+      }
+    } catch {
+      /* directory was just created / is empty */
+    }
   }
 
   async decide(req: DecisionRequest): Promise<DecisionResponse> {

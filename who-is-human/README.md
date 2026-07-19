@@ -9,6 +9,42 @@ match by staying hidden.
 > abstraction so the 6 agents can be **demo heuristics**, the **Claude API**, or
 > **six separate Claude Code / Codex / Gemini sessions**.
 
+## ▶ Best way to run it — use your Claude / GPT subscription (no API key)
+
+**You don't need an API key or any per-token billing.** If you already pay for a
+**Claude** (Claude Code) or **GPT** (Codex) subscription, the six AI foxes are
+driven by your local CLI — it signs in with your subscription, so a full game
+costs nothing extra and needs no `sk-…` key. This is the recommended setup.
+
+```bash
+# 0) one-time: make sure your CLI is installed and logged in
+claude --version          # or:  codex --version   /   gemini --version
+
+# 1) start the server (from the repo root)
+npm install
+npm start                 # http://localhost:8787 — then waits for a game to start
+
+# 2) launch the six local agents (from ANY folder — path is auto-anchored)
+#    Windows:
+pwsh tools\start-all-agents.ps1 claude
+#    macOS / Linux / WSL:
+./tools/start-all-agents.sh claude
+```
+
+Then **start a game on the `file` backend**: in the VR/web menu pick **"Local
+agents"**, or set `WIH_AGENT_BACKEND=file` before `npm start`.
+
+Each runner window prints `[A-0X] -> turn-001.json` then `[A-0X] <- turn-001.json
+ok` as that agent takes its turn — that's your confirmation it's wired up. Swap
+`claude` for `codex` or `gemini` to drive the foxes with a different subscription.
+
+**How it works:** the server drops each agent's decision request into
+`agent-workspace/<id>/inbox/`, your CLI answers it as a plain stdin→stdout call
+(no file tools, nothing to approve), and the reply lands in `…/outbox/`. Both the
+server and the runners anchor to the repo-root `agent-workspace/`, so it connects
+no matter which directory you launched from. The slot that's secretly *you* this
+game never receives turns and stays idle.
+
 ## Quick start (zero config)
 
 ```bash
@@ -102,7 +138,7 @@ tests/           setup, audit, outcome-matrix, full-game
 
 | command | does |
 |---|---|
-| `npm start` | run the web server (auto-starts a game) |
+| `npm start` | run the web server (waits for a client to start a game) |
 | `npm run dev` | same, with reload |
 | `npm run sim [-- <seed>]` | play a full game headless to stdout |
 | `npm test` | run the test suite |

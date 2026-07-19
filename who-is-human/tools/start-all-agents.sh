@@ -9,8 +9,11 @@
 set -u
 CLI="${1:-${CLI:-claude}}"
 MODEL="${2:-${MODEL:-}}"
-WORKSPACE="${WORKSPACE:-agent-workspace}"
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Default to the repo-root agent-workspace (absolute), the SAME folder the server
+# writes to (src/agents/factory.ts anchors there too). Absolute so each nohup'd
+# runner watches it no matter what CWD the launcher was invoked from.
+WORKSPACE="${WORKSPACE:-$DIR/agent-workspace}"
 mkdir -p "$DIR/logs"
 : > "$DIR/logs/agent-pids.txt"
 
