@@ -59,32 +59,31 @@ server and the runners anchor to the repo-root `agent-workspace/`, so it connect
 no matter which directory you launched from. The slot that's secretly *you* this
 game never receives turns and stays idle.
 
-### Ship it to players (one zip)
+### Get the game (build is in the repo)
 
-The compiled build is **not** in git — it's ~1 GB of binaries (including a 592 MB
-debug file GitHub would reject), and the dedicated server only ever needs the
-code. So the repo stays lean, and players get everything in **one zip** attached
-to a [GitHub **Release**](https://docs.github.com/repositories/releasing-projects-on-github)
-(or a drive link) — not a `git clone`:
+The playable build ships **in the repo** under `game/` at the root, so cloning
+gives you a ready-to-play package — no separate download:
 
-```
-whos-human-file-mode.zip
-├─ play-file-mode.bat / .command       ← the player double-clicks this
-├─ play-file-mode.ps1  / .sh
-├─ stop-file-mode.command
-├─ who-is-human/                        ← the server: run `npm install` once before
-│                                          zipping (bundle a portable node/ too if your
-│                                          players may not have Node — start-server.bat
-│                                          auto-prefers who-is-human/node/node.exe)
-└─ game/
-   └─ WhosHuman.exe   (or WhosHuman.app) ← your build goes here
+```bash
+git clone https://github.com/biggermelon3/whos-human-vr
+cd whos-human-vr
+play-file-mode.bat            # Windows   (macOS:  ./play-file-mode.command)
 ```
 
-The player unzips, double-clicks the launcher, and picks **Local agents → START** —
-no git, no API key, just their own Claude/Codex subscription. Before zipping,
-delete the build's `WhosHuman_BackUpThisFolder_ButDontShipItWithYourGame/` folder
-(Unity says so itself — ~600 MB of symbols you never ship). Full packaging recipes
-(portable Node, PC-VR vs Quest, BYOK): `../UnityVr/WhosHuman/BUILD_AND_DISTRIBUTE.md`.
+…then in the menu pick **Local agents → START**. No API key — just your own
+Claude/Codex subscription. Both platforms coexist in `game/` (Windows finds
+`WhosHuman.exe`, macOS finds `WhosHuman.app`).
+
+Only the **shippable** build is committed (~171 MB). Unity's debug-symbol folders
+(`*_BackUpThisFolder…`, `*_BurstDebug…` — ~600 MB, incl. a 592 MB file GitHub
+rejects) are stripped and gitignored, so never `git add` a raw build folder; drop
+it in `game/` stripped, or use `make-release-zip.sh` which strips it for you.
+
+A one-click **zip** is also attached to each
+[Release](https://github.com/biggermelon3/whos-human-vr/releases) for players who
+don't use git — build it with `make-release-zip.sh <platform> <build-dir>`. Full
+packaging recipes (portable Node, PC-VR vs Quest, BYOK):
+`../UnityVr/WhosHuman/BUILD_AND_DISTRIBUTE.md`.
 
 ## Quick start (zero config)
 
