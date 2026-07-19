@@ -16,6 +16,20 @@ match by staying hidden.
 driven by your local CLI — it signs in with your subscription, so a full game
 costs nothing extra and needs no `sk-…` key. This is the recommended setup.
 
+### Simplest: one command
+
+The launchers live at the **repo root** (one level up from here). Each starts the
+server **and** the six agents for you — and if you drop your packaged build in a
+`game/` folder next to them, it gets launched too:
+
+- **Windows** — double-click `play-file-mode.bat` (or `play-file-mode.bat codex`)
+- **macOS / Linux** — double-click `play-file-mode.command` (or `./play-file-mode.sh codex`); stop with `stop-file-mode.command`
+
+Then in the in-game menu pick **Server = Local → Backend = "Local agents" →
+START**. That's it. The manual, cross-platform version is below.
+
+### Manual (any OS)
+
 ```bash
 # 0) one-time: make sure your CLI is installed and logged in
 claude --version          # or:  codex --version   /   gemini --version

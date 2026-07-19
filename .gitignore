@@ -41,6 +41,13 @@ sysinfo.txt
 *.aab
 *.app
 *.unitypackage
+# Packaged standalone builds (large binaries — distribute outside git)
+UnityVr/WindowsBuild/
+UnityVr/MacBuild/
+UnityVr/**/Builds/
+# A build dropped next to the launchers for one-click play (see play-file-mode.*)
+/game/
+who-is-human/game/
 
 # Debug screenshots (regenerable — see Assets/Screenshots)
 UnityVr/WhosHuman/Assets/Screenshots/
