@@ -59,6 +59,33 @@ server and the runners anchor to the repo-root `agent-workspace/`, so it connect
 no matter which directory you launched from. The slot that's secretly *you* this
 game never receives turns and stays idle.
 
+### Ship it to players (one zip)
+
+The compiled build is **not** in git — it's ~1 GB of binaries (including a 592 MB
+debug file GitHub would reject), and the dedicated server only ever needs the
+code. So the repo stays lean, and players get everything in **one zip** attached
+to a [GitHub **Release**](https://docs.github.com/repositories/releasing-projects-on-github)
+(or a drive link) — not a `git clone`:
+
+```
+whos-human-file-mode.zip
+├─ play-file-mode.bat / .command       ← the player double-clicks this
+├─ play-file-mode.ps1  / .sh
+├─ stop-file-mode.command
+├─ who-is-human/                        ← the server: run `npm install` once before
+│                                          zipping (bundle a portable node/ too if your
+│                                          players may not have Node — start-server.bat
+│                                          auto-prefers who-is-human/node/node.exe)
+└─ game/
+   └─ WhosHuman.exe   (or WhosHuman.app) ← your build goes here
+```
+
+The player unzips, double-clicks the launcher, and picks **Local agents → START** —
+no git, no API key, just their own Claude/Codex subscription. Before zipping,
+delete the build's `WhosHuman_BackUpThisFolder_ButDontShipItWithYourGame/` folder
+(Unity says so itself — ~600 MB of symbols you never ship). Full packaging recipes
+(portable Node, PC-VR vs Quest, BYOK): `../UnityVr/WhosHuman/BUILD_AND_DISTRIBUTE.md`.
+
 ## Quick start (zero config)
 
 ```bash

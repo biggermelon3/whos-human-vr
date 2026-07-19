@@ -34,13 +34,17 @@ if (-not (Test-Path (Join-Path $server "package.json"))) {
 }
 
 # 0) Is the coding-agent CLI installed and on PATH?
-$cli = Get-Command $Cli -ErrorAction SilentlyContinue
-if (-not $cli) {
+#    NOTE: use a NON-colliding variable name. PowerShell variables are
+#    case-insensitive, so a var named $cli would BE the $Cli parameter, and
+#    assigning Get-Command's result (coerced to "claude.exe") would re-trigger
+#    the [ValidateSet] on $Cli and throw.
+$cliCmd = Get-Command $Cli -ErrorAction SilentlyContinue
+if (-not $cliCmd) {
   Write-Host "[X] '$Cli' not found on PATH. Install it and log in first, then re-run." -ForegroundColor Red
   Write-Host "    (file mode drives the foxes with your $Cli subscription -- no API key needed.)" -ForegroundColor DarkGray
   exit 1
 }
-Write-Host "[ok] $Cli found: $($cli.Source)" -ForegroundColor Green
+Write-Host "[ok] $Cli found: $($cliCmd.Source)" -ForegroundColor Green
 
 # 1) Dependencies present? (first run on a dev machine)
 if (-not (Test-Path (Join-Path $server "node_modules\tsx"))) {
