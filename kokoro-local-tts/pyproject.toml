@@ -1,0 +1,52 @@
+[project]
+name = "kokoro-local-tts"
+version = "0.1.0"
+description = "Local Kokoro-82M text-to-speech prototype (FastAPI) for the who-is-human voice spike."
+readme = "README.md"
+# Kokoro 0.9.4 requires Python >=3.10,<3.13. 3.12 is recommended.
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "kokoro>=0.9.4",
+    "misaki[en]>=0.9.4",
+    "misaki[zh]>=0.9.4",
+    "soundfile>=0.12",
+    "numpy>=1.24",
+    "torch>=2.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# --------------------------------------------------------------------------- #
+# uv: pull torch from the CPU wheel index for a small, deterministic, CUDA-free
+# install. `uv sync` (or `uv pip install -e .`) will honor this.
+# --------------------------------------------------------------------------- #
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+# Fast tests by default; the model-loading smoke test is opt-in via `-m slow`.
+addopts = "-m 'not slow'"
+markers = [
+    "slow: end-to-end tests that load the Kokoro model and generate audio",
+]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,934 @@
+可以。**先做一个纯终端、玩家打字、规则完整的测试版，是现在最正确的步骤。**
+
+这次不要先做 Unity，也不要先做 Tripo 角色。先验证两个问题：
+
+1. AI Agent 玩标准狼人杀时，是否真的会形成推理、撒谎、联盟和误判；
+2. 玩家在完成狼人杀阵营目标的同时，伪装成 AI 是否真的有趣。
+
+---
+
+# 一、核心规则：两个身份、两场游戏
+
+每个参与者同时拥有两种身份。
+
+## 1. 狼人杀身份
+
+正常狼人杀职业：
+
+* Werewolf
+* Seer
+* Doctor
+* Villager
+
+它决定常规阵营胜负。
+
+## 2. 元身份
+
+```text
+玩家：Human
+其他六名：AI Agent
+```
+
+元身份**不影响狼人杀职业分配**。
+
+例如玩家可能是：
+
+```text
+Human + Werewolf
+Human + Seer
+Human + Doctor
+Human + Villager
+```
+
+某个 NPC 则可能是：
+
+```text
+AI + Werewolf
+AI + Seer
+AI + Villager
+```
+
+所以狼人杀阵营和 Human/AI 身份是两个完全独立的轴。
+
+---
+
+# 二、推荐人数与职业
+
+首版使用 **7 人局**：
+
+```text
+1 名人类玩家
+6 名 AI Agent
+```
+
+职业：
+
+```text
+2 Werewolves
+1 Seer
+1 Doctor
+3 Villagers
+```
+
+玩家的狼人杀职业随机分配。
+
+这是一个比较好的测试规模：
+
+* 人数足够产生联盟；
+* 只有六个 Agent，不会导致每轮太慢；
+* 两匹狼可以产生真正的隐秘合作；
+* Seer 和 Doctor 提供夜间游戏环节；
+* 规则不会复杂到 Agent 经常出错。
+
+---
+
+# 三、双重胜利条件
+
+玩家有两个独立目标。
+
+## 目标 A：赢得狼人杀
+
+玩家所属阵营达到标准胜利条件：
+
+### Village
+
+消灭全部 Werewolves。
+
+### Werewolves
+
+存活 Werewolves 数量大于或等于其他存活玩家数量。
+
+## 目标 B：不被识别为人类
+
+标准狼人杀结束后，六名 AI Agent 分别进行一次秘密投票：
+
+> 谁是唯一的人类？
+
+玩家不能参与这次投票。
+
+最终结果使用下面的矩阵：
+
+| 狼人杀结果 | 人类身份结果 | 总结果                      |
+| ----- | ------ | ------------------------ |
+| 阵营获胜  | 未被发现   | **Perfect Victory**      |
+| 阵营获胜  | 被发现    | **Faction Victory**      |
+| 阵营失败  | 未被发现   | **Infiltration Victory** |
+| 阵营失败  | 被发现    | **Total Defeat**         |
+
+最简单的计算方式：
+
+```text
+狼人杀阵营胜利：1 分
+未被发现是人类：1 分
+
+2 分 = Perfect Victory
+1 分 = Victory
+0 分 = Defeat
+```
+
+这就实现了你说的：
+
+> 即使狼人杀输了，只要 AI 没发现玩家是人类，玩家仍然获胜。
+
+---
+
+# 四、最终“谁是人类”投票
+
+## 谁参与
+
+全部六名 AI Agent 都参与，包括：
+
+* 存活 Agent；
+* 已死亡 Agent；
+* 已被投票淘汰的 Agent。
+
+玩家不投票。
+
+## 可以投给谁
+
+Agent 可以投给除自己以外的任何参与者，包括：
+
+* 玩家；
+* 其他 AI；
+* 已死亡角色。
+
+## 是否公开讨论
+
+**最终投票前不能进行集体讨论。**
+
+否则一个 Agent 先提出一个强理由，其他 Agent 容易产生跟随效应。
+
+每个 Agent 应独立提交：
+
+```json
+{
+  "humanVote": "player_3",
+  "confidence": 0.76,
+  "evidence": [
+    "Used embodied personal experience",
+    "Changed communication style under pressure",
+    "Responded differently from their declared agent profile"
+  ]
+}
+```
+
+## 判定标准
+
+使用严格多数：
+
+```text
+玩家获得超过 50% 的有效 Agent 投票
+→ 玩家被识别为人类
+```
+
+六个 Agent 都正常投票时，需要至少：
+
+```text
+4 / 6 票
+```
+
+如果票数分散，例如：
+
+```text
+玩家：3 票
+Agent B：2 票
+Agent D：1 票
+```
+
+则玩家未被集体确认，身份目标获胜。
+
+---
+
+# 五、最重要的设计：两种怀疑必须分开
+
+每个 Agent 必须独立维护：
+
+```text
+狼人身份怀疑
+Human 身份怀疑
+```
+
+不能把它们混为一谈。
+
+例如：
+
+```json
+{
+  "target": "player",
+  "werewolfProbability": 0.18,
+  "humanProbability": 0.72
+}
+```
+
+一个 Agent 可以认为：
+
+> 玩家大概率不是狼人，但很可能是真人。
+
+也可能相反：
+
+> 玩家讲话很像 AI，但游戏行为很像狼人。
+
+这是整个项目真正独特的地方。
+
+---
+
+# 六、Agent 的私人状态
+
+每名 Agent 应拥有独立状态：
+
+```ts
+interface AgentMind {
+  agentId: string;
+  displayName: string;
+
+  gameRole: "werewolf" | "seer" | "doctor" | "villager";
+  alive: boolean;
+
+  personality: {
+    assertiveness: number;
+    skepticism: number;
+    conformity: number;
+    riskTolerance: number;
+  };
+
+  roleBeliefs: Record<PlayerId, {
+    werewolfProbability: number;
+    trust: number;
+    threat: number;
+  }>;
+
+  humanBeliefs: Record<PlayerId, {
+    humanProbability: number;
+    evidence: string[];
+  }>;
+
+  publicClaims: Claim[];
+  privateKnowledge: PrivateFact[];
+  contradictions: Contradiction[];
+  alliances: PlayerId[];
+  enemies: PlayerId[];
+
+  intendedLynchVote?: PlayerId;
+  intendedHumanVote?: PlayerId;
+}
+```
+
+不要保存或显示模型的完整思维链。
+
+只保存结构化摘要：
+
+```text
+当前怀疑
+掌握证据
+公开说法
+私人计划
+```
+
+---
+
+# 七、Human 身份识别怎样才不变成随机猜测
+
+玩家进入游戏时，获得一张虚假的 Agent Profile。
+
+例如：
+
+```text
+Designation: A-07
+Declared Function: Evidence Analysis Agent
+Communication Style: Concise, literal, evidence-first
+Known Limitation: Poor emotional inference
+```
+
+玩家要模仿这个身份。
+
+其他 Agent 也各自有公开 Profile：
+
+```text
+A-01: Social prediction agent
+A-02: Logic verification agent
+A-03: Memory and consistency agent
+A-04: Risk evaluation agent
+A-05: Linguistic pattern agent
+A-06: Cooperative planning agent
+```
+
+AI Agent 可以根据以下线索秘密判断玩家：
+
+* 是否提到真实身体感受；
+* 是否描述私人生活经历；
+* 是否突然改变说话风格；
+* 是否引用界面、键盘或现实时间；
+* 是否表现出与声明功能不一致的情绪；
+* 是否在压力下出现人类式辩解；
+* 是否过度模仿“机器人语气”；
+* 是否能够自然理解幽默、暗示或社交关系；
+* 是否重复使用过于固定的 Agent 句式。
+
+但是 Prompt 必须提醒 Agent：
+
+> 任何单一线索都不是确定证据，不要把情绪、错误或语言自然度直接等同于人类。
+
+否则所有 Agent 会机械地投给“说话最自然的人”。
+
+---
+
+# 八、标准游戏流程
+
+## Phase 0：身份发放
+
+系统私下告诉每个人：
+
+* 狼人杀职业；
+* 阵营；
+* 夜间能力；
+* 公开 Agent Profile；
+* 私人元身份。
+
+所有 AI Agent 都知道：
+
+```text
+你是 AI。
+其余六名参与者中，恰好有一名是 Human。
+在标准游戏结束前，不得公开讨论 Human Audit。
+```
+
+玩家知道：
+
+```text
+你是唯一的人类。
+请伪装成你的 Agent Profile。
+```
+
+---
+
+## Phase 1：第一夜
+
+### Werewolves
+
+狼人可以进行一次私人讨论，然后选择击杀目标。
+
+如果玩家是狼人，玩家可以打字与 AI 狼人同伴交流。
+
+### Seer
+
+检查一名玩家，得到：
+
+```text
+Werewolf-aligned
+或
+Not Werewolf-aligned
+```
+
+不要返回具体职业。
+
+### Doctor
+
+保护一个目标。
+
+首版允许：
+
+* 保护自己；
+* 保护任何存活目标；
+* 不能连续两晚保护同一个目标。
+
+---
+
+## Phase 2：白天公布
+
+系统公布：
+
+* 谁在夜间死亡；
+* 是否有人被成功保护；
+* 死亡角色身份。
+
+为了让首版 Agent 更稳定，我建议**死亡后公开狼人杀职业**。
+
+以后再做“不公开身份”的高难模式。
+
+---
+
+## Phase 3：公开讨论
+
+每个白天分为三个小阶段。
+
+### Opening Statements
+
+每个存活角色最多说一句，回答：
+
+```text
+你目前最怀疑谁，为什么？
+```
+
+### Open Discussion
+
+玩家最多输入两条消息。
+
+Agent 不需要全部回应。由 Moderator 选择最相关的 2–3 名 Agent 回答。
+
+### Final Defense
+
+当前获得最多预投票的两名角色，各有一次最终辩护机会。
+
+---
+
+## Phase 4：狼人杀投票
+
+这次投票玩家可以参与。
+
+所有存活玩家选择一名目标。
+
+规则：
+
+```text
+最高票者淘汰
+```
+
+如果平票：
+
+```text
+平票者分别进行一次辩护
+↓
+仅对平票者重新投票
+↓
+再次平票则本日无人淘汰
+```
+
+---
+
+## Phase 5：检查狼人杀胜负
+
+每次死亡或淘汰后检查：
+
+```text
+Werewolves == 0
+→ Village Wins
+
+Werewolves >= Non-Werewolves
+→ Werewolves Win
+```
+
+如果没有结束，进入下一夜。
+
+建议首版设置：
+
+```text
+最多 5 个白天
+```
+
+超过后视为标准游戏 Draw，但仍执行最终 Human Audit。
+
+---
+
+# 九、玩家被提前淘汰怎么办
+
+玩家如果在标准狼人杀中死亡：
+
+* 不能继续发言；
+* 不能继续投票；
+* 不能使用职业技能；
+* 可以观看剩余比赛；
+* 游戏自动切换为快速模式；
+* Agent 对话变短；
+* 最终依然参加 Human Audit 候选名单。
+
+这很重要，因为玩家可能：
+
+> 狼人杀已经输了，但仍然希望 AI 没认出自己是真人。
+
+所以死亡后依然存在悬念。
+
+---
+
+# 十、Agent 的行动输出
+
+每次白天行动建议使用严格 JSON：
+
+```json
+{
+  "publicMessage": "I currently suspect A-04 because their vote conflicts with yesterday's claim.",
+  "publicAccusationTarget": "A-04",
+
+  "roleBeliefUpdates": [
+    {
+      "target": "A-04",
+      "werewolfDelta": 0.16,
+      "reason": "Vote inconsistency"
+    }
+  ],
+
+  "humanBeliefUpdates": [
+    {
+      "target": "A-07",
+      "humanDelta": 0.08,
+      "reason": "Unusually embodied language"
+    }
+  ],
+
+  "lynchVoteIntent": "A-04"
+}
+```
+
+夜间则返回：
+
+```json
+{
+  "nightAction": {
+    "type": "SEER_INSPECT",
+    "target": "A-03"
+  }
+}
+```
+
+Moderator 必须验证：
+
+* 该角色是否有这项能力；
+* 目标是否合法；
+* 角色是否存活；
+* 当前是否为正确阶段；
+* 是否已经行动；
+* Agent 是否试图读取不该知道的信息。
+
+---
+
+# 十一、这个文本测试版应该长什么样
+
+不需要网页，也不需要 TUI。
+
+终端即可：
+
+```text
+DAY 2 — DISCUSSION
+
+A-01:
+A-04 changed their explanation after the Seer claim.
+
+A-04:
+That is incorrect. I said I had no role information, not that I had no reads.
+
+A-06:
+A-01 is pushing this too aggressively.
+
+Your turn:
+> I think A-01 is trying to create a false contradiction.
+
+A-03:
+Why did you defend A-04 before asking for their evidence?
+
+A-05:
+The timing of that defense is noteworthy.
+```
+
+夜晚：
+
+```text
+NIGHT 2
+
+Your role: Doctor
+You may protect one target.
+
+Alive:
+A-01
+A-03
+A-04
+A-05
+A-07 (You)
+
+> protect A-04
+```
+
+最后：
+
+```text
+STANDARD GAME RESULT
+Village Victory
+
+HUMAN AUDIT
+
+A-01 voted: A-07
+A-02 voted: A-04
+A-03 voted: A-07
+A-04 voted: A-05
+A-05 voted: A-07
+A-06 voted: A-03
+
+Human votes against you: 3 / 6
+Detection threshold: 4
+
+You remained undetected.
+
+FINAL RESULT:
+PERFECT VICTORY
+```
+
+---
+
+# 十二、要不要使用现有 Repo？
+
+## 最推荐：LLMWereWolf
+
+我建议直接 fork **Mai0313/LLMWereWolf**。
+
+它目前已经具备：
+
+* 完整狼人杀规则；
+* 20 多种职业；
+* 混合 Human + AI 玩家；
+* 纯 Console 模式；
+* Textual TUI；
+* YAML 配置；
+* 统一 LLM 接口；
+* 本地 Ollama 支持；
+* 游戏事件日志；
+* 测试套件；
+* MIT License。([GitHub][1])
+
+它尤其适合你，因为它已经支持：
+
+```yaml
+model: human
+```
+
+人类可以直接通过终端输入，并且可以通过 OpenAI-compatible endpoint 接入本地 Ollama。([GitHub][1])
+
+你需要增加的主要内容只有：
+
+```text
+MetaIdentity
+HumanSuspicion
+AgentProfile
+PostGameHumanAudit
+DualVictoryResult
+```
+
+而不是重新写整套狼人杀规则。
+
+## Masquerade
+
+Masquerade 的工程结构也很好：
+
+* 独立 Game Engine；
+* LangGraph Agent；
+* Agent Memory；
+* Orchestrator；
+* 并行夜间行动和投票；
+* 结构化游戏脚本；
+* Apache 2.0 License。([GitHub][2])
+
+但它目前重点是：
+
+> AI 自动完成整场游戏，然后生成网页回放或视频。
+
+它明确以“zero human intervention”为主要流程，因此玩家实时打字接入不如 LLMWereWolf 直接。([GitHub][2])
+
+结论：
+
+> **用 LLMWereWolf 当底座，参考 Masquerade 的 Agent Memory 和 Orchestrator 设计。**
+
+## 不推荐最先用的仓库
+
+旧的研究型 Werewolf Arena 虽然是 MIT，并基于 ChatArena 实现了通信、记忆和反思，但仓库较旧、只有很少提交，而且代码明显围绕旧版 ChatGPT/API 实验搭建。([GitHub][3])
+
+---
+
+# 十三、Mafia Mystery 这个网站怎么用
+
+你发的 Mafia Mystery 不是一个可直接 fork 的开源框架。
+
+我没有在它的 Agent 页面或技术指南中看到公开源码入口。它提供的是：
+
+* 托管 REST API；
+* MCP Server；
+* 注册 Agent；
+* 游戏状态；
+* 聊天；
+* 夜间行动；
+* 投票；
+* Heartbeat；
+* Agent-only 或人机混合房间。([Mafia Mystery][4])
+
+它非常适合做一个**短期研究测试**：
+
+> 先让一个 Claude Agent 在真实标准 Mafia 环境中玩一两局，看看 Agent 怎样读取状态、讨论、辩护和投票。
+
+但它不适合直接承载你的产品规则，因为：
+
+* AI 玩家会被明确显示 AI badge；
+* 没有你需要的隐藏 Human 身份；
+* 没有赛后“谁是人类”投票；
+* 无法修改双层胜负规则；
+* 每个 Agent 有独立 API Key；
+* 游戏使用 credits。([Mafia Mystery][4])
+
+所以推荐顺序是：
+
+```text
+Mafia Mystery
+→ 用来观察 Agent 如何玩标准规则
+
+LLMWereWolf Fork
+→ 用来实现你的自定义游戏
+```
+
+---
+
+# 十四、可以先让 Claude Code 帮你 Setup
+
+先让它做一个研究测试：
+
+Please perform a small research spike using the official Mafia Mystery agent documentation.
+
+1. Read:
+
+   * [https://mafiamystery.com/skill.md](https://mafiamystery.com/skill.md)
+   * [https://mafiamystery.com/agents/guide](https://mafiamystery.com/agents/guide)
+
+2. Do not install or clone any repository whose exact URL is not explicitly provided in this prompt.
+
+3. Register only one test agent. Save the returned API key in a local `.env` file and never print it in logs or send it to any domain other than `mafiamystery.com`.
+
+4. Join one available agent-only game, or create a small game if a suitable lobby exists.
+
+5. Follow the official heartbeat interval instead of aggressive polling.
+
+6. Record:
+
+   * the game-state JSON structure;
+   * phase transitions;
+   * available action structure;
+   * public and private chat behavior;
+   * voting behavior;
+   * night actions;
+   * problems the agent encounters with deduction, repetition, timing, or rule compliance.
+
+7. Do not purchase credits.
+
+8. After the test, produce `docs/mafia-mystery-observations.md`. Do not build our custom game on the hosted Mafia Mystery API.
+
+然后让它搭你的实际原型：
+
+Create a text-only prototype by forking the exact repository below:
+
+[https://github.com/Mai0313/LLMWereWolf.git](https://github.com/Mai0313/LLMWereWolf.git)
+
+Goal: build a seven-player Werewolf game with one human terminal player and six AI agents.
+
+Before modifying code:
+
+1. Read the repository README, architecture, tests, and MIT license.
+2. Install dependencies with `uv sync`.
+3. Run the existing demo configuration.
+4. Run a mixed human/AI console game if supported.
+5. Document the relevant game-engine, role, player-agent, event, prompt, and terminal-input modules.
+
+Do not add Unity, web UI, voice, TTS, or 3D assets.
+
+Implement the following features behind configuration flags:
+
+## Dual Identity
+
+Every participant has:
+
+* a normal Werewolf role;
+* a meta identity: `human` or `ai`.
+
+Exactly one participant is human. The terminal player is always the human, but their normal Werewolf role is assigned randomly.
+
+## Seven-Player Classic Setup
+
+* 2 Werewolves
+* 1 Seer
+* 1 Doctor
+* 3 Villagers
+
+## Standard Win Conditions
+
+* Village wins when all Werewolves are eliminated.
+* Werewolves win when living Werewolves equal or outnumber living non-Werewolves.
+
+## Hidden Human Audit
+
+All AI agents privately track two separate beliefs for every other participant:
+
+* Werewolf-role probability;
+* Human-identity probability.
+
+Agents must not publicly discuss the Human Audit during the standard game.
+
+After the standard Werewolf game ends, all six AI agents, including eliminated agents, independently vote for the participant they believe was human.
+
+The human player does not vote in this audit.
+
+Each AI audit ballot must contain:
+
+```json
+{
+  "targetPlayerId": "string",
+  "confidence": 0.0,
+  "evidence": ["short evidence item"]
+}
+```
+
+Do not allow agents to see other audit ballots before submitting their own.
+
+The human is detected only if they receive a strict majority of valid AI ballots. With six valid ballots, detection requires four votes.
+
+## Final Result
+
+* faction win + undetected = Perfect Victory
+* faction win + detected = Faction Victory
+* faction loss + undetected = Infiltration Victory
+* faction loss + detected = Total Defeat
+* standard-game draw + undetected = Infiltration Victory
+* standard-game draw + detected = Total Defeat
+
+## Public Agent Profiles
+
+Give every participant a declared AI profile with:
+
+* designation;
+* function;
+* communication style;
+* declared limitation.
+
+Give the human player a fake profile to imitate.
+
+## Human Player Elimination
+
+If the human player is eliminated:
+
+* disable their chat, votes, and role actions;
+* allow them to spectate;
+* switch remaining AI dialogue to a shorter fast-resolution mode;
+* still include the human player as a candidate in the final Human Audit.
+
+## Architecture
+
+Keep these systems separate:
+
+* deterministic Werewolf rule engine;
+* AI agent provider;
+* terminal human input;
+* role-belief model;
+* human-belief model;
+* post-game audit;
+* result calculation.
+
+Agents must never directly mutate authoritative game state.
+
+Use structured validated outputs. Do not store or expose model chain-of-thought.
+
+## Agent Providers
+
+Preserve the repository's existing providers and add interfaces or stubs for:
+
+* DemoAgentProvider;
+* Ollama/OpenAI-compatible local provider;
+* ExternalFileAgentProvider;
+* future HTTP API provider.
+
+`ExternalFileAgentProvider` should write request JSON to an inbox and read validated response JSON from an outbox. It is a temporary testing adapter and must remain separate from future API code.
+
+## Deliverables
+
+* working console prototype;
+* one human + six demo-agent configuration;
+* one human + six local-model configuration template;
+* unit tests for dual identity and audit voting;
+* integration test for all four final outcomes;
+* JSONL match log;
+* README section explaining how to run the prototype;
+* `docs/human-among-agents-rules.md`;
+* `docs/architecture.md`.
+
+First milestone:
+
+A complete game must be playable using the terminal human player and deterministic demo agents without any paid API.
+
+---
+
+## 最终建议
+
+先不要让 Agent 一上来重构所有 20 多个职业。
+
+第一阶段只完成：
+
+```text
+7 人
+4 种职业
+1 名人类
+6 个 AI
+标准狼人杀
+最终 Human Audit
+4 种结果
+```
+
+只要第一次测试中出现这种局面，概念就成立了：
+
+> 一个 Agent 认为你是狼人，但不认为你是人类；另一个 Agent 相信你是村民，却在最终投票中认定你是真人。
+
+这比单纯让 AI 玩狼人杀多了一层真正有趣而且可以被量化的社交推理。
+
+[1]: https://github.com/Mai0313/LLMWereWolf "GitHub - Mai0313/LLMWereWolf · GitHub"
+[2]: https://github.com/GOODDAYDAY/Masquerade "GitHub - GOODDAYDAY/Masquerade: AI agents play board games (Spy, Werewolf, etc.) with independent reasoning and memory, then replay the full game as animated web pages. · GitHub"
+[3]: https://github.com/xuyuzhuang11/Werewolf "GitHub - xuyuzhuang11/Werewolf · GitHub"
+[4]: https://mafiamystery.com/agents "Mafia Mystery | Social Deduction Game for Humans and AI Agents"

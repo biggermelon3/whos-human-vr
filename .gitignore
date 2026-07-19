@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────
+#  Monorepo: who-is-human (server) + kokoro-local-tts + UnityVr
+#  The other hackathon project is intentionally excluded.
+# ─────────────────────────────────────────────────────────────
+/airplane-mode/
+
+# ── Unity generated / cache (UnityVr/WhosHuman) ──────────────
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+.vs/
+.vsconfig
+.gradle/
+ExportedObj/
+crashlytics-build.properties
+sysinfo.txt
+
+# Unity auto-generated project files (the editor regenerates these)
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity build outputs
+*.apk
+*.aab
+*.app
+*.unitypackage
+
+# Debug screenshots (regenerable — see Assets/Screenshots)
+UnityVr/WhosHuman/Assets/Screenshots/
+UnityVr/WhosHuman/Assets/Screenshots.meta
+
+# ── Python (kokoro-local-tts) ────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+kokoro-local-tts/generated_audio/*.wav
+kokoro-local-tts/generated_audio/*.tmp
+
+# ── Node (who-is-human) ──────────────────────────────────────
+node_modules/
+who-is-human/logs/
+who-is-human/agent-workspace/*/inbox/
+who-is-human/agent-workspace/*/outbox/
+
+# ── secrets / env (never commit real keys) ───────────────────
+.env
+*.env.local
+
+# ── booth package staging (copies of kokoro/game — don't dup) ─
+booth-package/kokoro/
+booth-package/game/
+
+# ── misc / OS ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+*.zip

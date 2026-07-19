@@ -1,0 +1,46 @@
+# Normalize text to LF in the repo across Windows / macOS / Linux.
+* text=auto
+
+# Shell scripts MUST be LF or bash on macOS/Linux fails with $'\r' errors.
+*.sh       text eol=lf
+*.bash     text eol=lf
+*.command  text eol=lf
+
+# Windows scripts stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Unity-serialized (YAML) assets: text, LF, so diffs stay sane.
+*.meta        text eol=lf
+*.unity       text eol=lf
+*.prefab      text eol=lf
+*.asset       text eol=lf
+*.mat         text eol=lf
+*.anim        text eol=lf
+*.controller  text eol=lf
+*.shader      text eol=lf
+
+# Binary assets — never touch line endings.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.tga  binary
+*.psd  binary
+*.exr  binary
+*.hdr  binary
+*.fbx  binary
+*.obj  binary
+*.blend binary
+*.wav  binary
+*.mp3  binary
+*.ogg  binary
+*.webm binary
+*.mp4  binary
+*.ttf  binary
+*.otf  binary
+*.ico  binary
+*.pt   binary
+*.pth  binary
+*.zip  binary

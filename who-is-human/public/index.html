@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Who is Human — reverse Turing werewolf</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header id="topbar">
+      <div class="brand">WHO&nbsp;IS&nbsp;HUMAN <span class="sub" data-i18n="brand.sub">reverse-Turing werewolf</span></div>
+      <div id="status" class="status">connecting…</div>
+      <div class="controls">
+        <label class="tts-toggle" title="Auto-generate and play a voice for each new line">
+          <input type="checkbox" id="ttsAuto" /> 🔊 <span id="ttsStatus" class="tts-status"></span>
+        </label>
+        <label class="tts-toggle" title="Reveal each AI agent's private reasoning and its two suspicion tracks (spoils the game — for testing)">
+          <input type="checkbox" id="observer" /> 🔍 <span data-i18n="observer.label">Observer</span>
+        </label>
+        <select id="langSel" title="Language"></select>
+        <button id="applyLang" class="hidden" title="Restart so the agents and voices also use this language"></button>
+        <select id="backendSel" title="AI backend for the 6 agents">
+          <option value="" data-i18n="backend.default">(server default)</option>
+          <option value="demo">demo (no key)</option>
+          <option value="api">api (Claude)</option>
+          <option value="file">file (Claude Code / Codex)</option>
+        </select>
+        <input id="seedInput" type="number" placeholder="seed" title="optional seed" />
+        <button id="newGameBtn" data-i18n="ctrl.newgame">New game</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="transcriptPanel">
+        <div id="transcript"></div>
+        <div id="inputBar" class="hidden">
+          <div id="inputPrompt" class="prompt"></div>
+          <div id="inputControls"></div>
+        </div>
+        <div id="waiting" class="waiting hidden" data-i18n="waiting">agents are deliberating…</div>
+      </section>
+
+      <aside id="sidebar">
+        <div class="card" id="youCard">
+          <h3 data-i18n="you.title">You</h3>
+          <div id="youBody">—</div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="players.title">Participants</h3>
+          <ul id="players"></ul>
+        </div>
+        <div class="card">
+          <h3 data-i18n="notes.title">Your private notes</h3>
+          <ul id="privateNotes"></ul>
+        </div>
+        <div class="card hint">
+          <h3 data-i18n="hint.title">How to win</h3>
+          <p><b data-i18n="hint.goals">Two goals, scored separately:</b></p>
+          <p data-i18n="hint.g1">① Win the werewolf game for your faction.</p>
+          <p data-i18n="hint.g2">② Stay hidden — after the game the 6 AI agents secretly vote on who was the human. Get 4+ votes and you're detected.</p>
+          <p class="muted" data-i18n="hint.scoring">2 pts = Perfect · 1 pt = Victory · 0 = Defeat</p>
+        </div>
+      </aside>
+    </main>
+
+    <div id="resultOverlay" class="hidden">
+      <div class="resultBox">
+        <div id="resultTitle"></div>
+        <div id="resultBody"></div>
+        <button id="resultNew" data-i18n="ctrl.newgame">New game</button>
+      </div>
+    </div>
+
+    <script src="/i18n.js"></script>
+    <script src="/tts.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

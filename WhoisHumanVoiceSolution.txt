@@ -1,0 +1,515 @@
+Build a minimal, reliable local text-to-speech prototype using Kokoro TTS.
+
+The immediate goal is to prove this pipeline:
+
+Browser text input
+→ local FastAPI server
+→ Kokoro speech generation
+→ WAV file
+→ browser playback
+
+This is a technical spike only. Do not integrate Unity, AI agents, game logic, speech recognition, lip sync, or cloud APIs yet.
+
+## Core requirements
+
+Create a self-contained project named:
+
+```text
+kokoro-local-tts
+```
+
+Use:
+
+* Python 3.11 or 3.12
+* FastAPI
+* Uvicorn
+* Official `kokoro` Python package
+* `soundfile`
+* `numpy`
+* Plain HTML, CSS, and JavaScript
+* No React
+* No paid APIs
+* No Docker unless the normal local setup is already working
+
+Use the official Kokoro implementation and documentation:
+
+* https://github.com/hexgrad/kokoro
+* https://huggingface.co/hexgrad/Kokoro-82M
+* https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
+
+Do not use an unofficial wrapper unless the official package cannot run after reasonable debugging. If a fallback is required, document the reason before changing implementations.
+
+## First step: inspect the environment
+
+Before writing the implementation:
+
+1. Detect the operating system.
+2. Check the installed Python version.
+3. Check whether `uv` is available.
+4. Check whether `espeak-ng` is installed or required on this system.
+5. Do not modify global Python packages.
+6. Create an isolated virtual environment.
+7. Prefer `uv`, but fall back to standard `venv` if necessary.
+8. Record all setup discoveries in `SETUP_NOTES.md`.
+
+This project will probably be run on Windows. Provide Windows-friendly commands and startup scripts.
+
+## Project structure
+
+Create:
+
+```text
+kokoro-local-tts/
+├─ app/
+│  ├─ __init__.py
+│  ├─ main.py
+│  ├─ config.py
+│  ├─ schemas.py
+│  ├─ tts_service.py
+│  └─ audio_cache.py
+├─ static/
+│  ├─ index.html
+│  ├─ app.js
+│  └─ styles.css
+├─ generated_audio/
+├─ tests/
+│  ├─ test_health.py
+│  ├─ test_validation.py
+│  └─ test_tts_smoke.py
+├─ scripts/
+│  ├─ list_voices.py
+│  └─ generate_sample.py
+├─ .gitignore
+├─ pyproject.toml
+├─ README.md
+├─ SETUP_NOTES.md
+├─ run.bat
+└─ run.ps1
+```
+
+## Kokoro service
+
+Create a `KokoroTtsService` class.
+
+Requirements:
+
+1. Initialize `KPipeline` only once.
+2. Do not reload the model for every request.
+3. Default to American English:
+
+   ```python
+   KPipeline(lang_code="a")
+   ```
+4. Default voice:
+
+   ```text
+   af_heart
+   ```
+5. Default speed:
+
+   ```text
+   1.0
+   ```
+6. Kokoro may return multiple audio segments. Concatenate all generated segments into one NumPy array.
+7. Write WAV audio at 24,000 Hz.
+8. Protect generation with a lock if concurrent inference is unsafe.
+9. Handle empty generation cleanly.
+10. Log generation duration, character count, selected voice, and cache status.
+11. Never log secret data because this service should not require any secrets.
+
+Do not initialize a new pipeline inside the request handler.
+
+## Supported voices
+
+Do not hard-code voice names without checking that they work in the installed version.
+
+Create a curated initial list of at least six working English voices:
+
+* at least three female voices;
+* at least three male voices;
+* preferably a mixture of American and British voices.
+
+Create:
+
+```text
+GET /api/voices
+```
+
+Return:
+
+```json
+{
+  "voices": [
+    {
+      "id": "af_heart",
+      "label": "Heart",
+      "language": "en-US",
+      "gender": "female"
+    }
+  ]
+}
+```
+
+If a listed voice fails, remove it from the curated list and document the failure.
+
+Also create `scripts/list_voices.py` to inspect or test available voices.
+
+## API endpoints
+
+### Health
+
+```text
+GET /api/health
+```
+
+Return:
+
+```json
+{
+  "status": "ok",
+  "model": "Kokoro-82M",
+  "sampleRate": 24000,
+  "device": "cpu",
+  "pipelineLoaded": true
+}
+```
+
+Return a meaningful error state if model initialization failed.
+
+### List voices
+
+```text
+GET /api/voices
+```
+
+### Generate speech
+
+```text
+POST /api/tts
+```
+
+Request:
+
+```json
+{
+  "text": "I believe Agent Four contradicted their previous statement.",
+  "voice": "af_heart",
+  "speed": 1.0
+}
+```
+
+Validation:
+
+* `text`: 1–500 characters
+* `voice`: must be in the supported voice list
+* `speed`: 0.7–1.3
+* trim surrounding whitespace
+* reject unsupported values with clear HTTP 400 responses
+
+Response:
+
+```json
+{
+  "audioId": "sha256-based-id",
+  "audioUrl": "/api/audio/sha256-based-id.wav",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "cached": false
+}
+```
+
+### Retrieve generated WAV
+
+```text
+GET /api/audio/{audio_id}.wav
+```
+
+Return the file with:
+
+```text
+Content-Type: audio/wav
+```
+
+Use FastAPI `FileResponse`.
+
+Prevent path traversal. The client must never supply an arbitrary file path.
+
+## Audio caching
+
+Use a deterministic SHA-256 cache key generated from:
+
+```text
+text + voice + speed + model version
+```
+
+Store WAV files in:
+
+```text
+generated_audio/
+```
+
+If the same request is sent again:
+
+* do not regenerate it;
+* return the existing file;
+* set `cached: true`.
+
+Do not create a database.
+
+## Web test page
+
+Serve the static page from:
+
+```text
+GET /
+```
+
+The browser interface must contain:
+
+* multiline text input;
+* voice dropdown;
+* speed slider;
+* Generate button;
+* loading state;
+* HTML audio player;
+* Play button;
+* Download WAV link;
+* request duration display;
+* cache-hit display;
+* visible error message;
+* a small character voice preset section.
+
+Add six sample character presets:
+
+```text
+Analyst
+Empath
+Archivist
+Trickster
+Guardian
+Moderator
+```
+
+Each preset should select a different voice and optionally a different speed.
+
+Example behavior:
+
+```text
+Click “Analyst”
+→ voice and speed are updated
+→ sample dialogue is inserted
+→ user clicks Generate
+→ generated audio plays in the browser
+```
+
+Do not autoplay audio before a user interaction.
+
+Use:
+
+```javascript
+fetch("/api/tts", ...)
+```
+
+Then set the `<audio>` source to the returned `audioUrl`.
+
+## CORS and security
+
+Because FastAPI also serves the test page, CORS should not normally be required.
+
+If development CORS is added:
+
+* allow only localhost origins;
+* do not use `allow_origins=["*"]` unnecessarily;
+* bind Uvicorn to `127.0.0.1` by default;
+* do not expose the service to the public network.
+
+## Error handling
+
+Handle and display:
+
+* Kokoro package missing;
+* model download failure;
+* voice unavailable;
+* `espeak-ng` missing;
+* empty text;
+* invalid speed;
+* synthesis failure;
+* WAV write failure;
+* browser fetch failure.
+
+The server must return structured JSON errors:
+
+```json
+{
+  "error": {
+    "code": "TTS_GENERATION_FAILED",
+    "message": "Human-readable explanation"
+  }
+}
+```
+
+Do not return Python stack traces to the browser.
+
+Log full exceptions only in the terminal.
+
+## Startup behavior
+
+On startup:
+
+1. Create required directories.
+2. Load the Kokoro pipeline.
+3. Report whether the model is ready.
+4. Print the local test URL:
+
+   ```text
+   http://127.0.0.1:8000
+   ```
+5. Optionally perform a very short warm-up generation.
+6. Do not block startup indefinitely if warm-up fails.
+7. Report whether CPU or GPU is being used.
+
+## Startup scripts
+
+Create `run.bat` and `run.ps1`.
+
+They should:
+
+1. activate the project environment where appropriate;
+2. run:
+
+   ```text
+   uvicorn app.main:app --host 127.0.0.1 --port 8000
+   ```
+3. not install packages every time the service starts.
+
+Document a manual startup command as well.
+
+## Tests
+
+Add tests for:
+
+* `/api/health`;
+* unsupported voice rejection;
+* empty text rejection;
+* invalid speed rejection;
+* path traversal rejection;
+* deterministic cache key;
+* cached request reuse.
+
+Add one optional TTS smoke test that generates a very short WAV:
+
+```text
+Hello, Agent.
+```
+
+The smoke test may be marked slow because it requires the actual model.
+
+Verify that the resulting file:
+
+* exists;
+* is non-empty;
+* is readable as WAV;
+* has a 24,000 Hz sample rate.
+
+## README
+
+The README must include:
+
+1. What Kokoro is.
+2. System requirements.
+3. Windows setup.
+4. `espeak-ng` setup if required.
+5. Installation commands.
+6. How to run the server.
+7. How to open the web interface.
+8. How to test six different voices.
+9. API request examples.
+10. Common errors and fixes.
+11. First-run model download behavior.
+12. Approximate generated-file location.
+13. How this can later be consumed by Unity.
+
+Include this future Unity contract:
+
+```text
+POST /api/tts
+→ receive audioUrl
+→ Unity downloads WAV
+→ Unity assigns it to the speaking character's AudioSource
+```
+
+Do not write Unity code in this milestone.
+
+## Quality requirements
+
+* Use type hints.
+* Use Pydantic request and response models.
+* Keep API, model inference, cache, and web UI separated.
+* Avoid one giant `main.py`.
+* Use clear naming.
+* Do not silently swallow exceptions.
+* Do not add unnecessary infrastructure.
+* Do not add authentication.
+* Do not add a database.
+* Do not add AI agent integration.
+* Do not add real-time streaming yet.
+* Generate complete WAV files first.
+* Do not use cloud inference.
+* Do not require an API key.
+
+## Required verification before declaring completion
+
+Actually run the project and verify:
+
+1. The server starts.
+2. `/api/health` returns successfully.
+3. `/api/voices` returns multiple voices.
+4. The browser page loads.
+5. At least three different voices successfully generate playable audio.
+6. Repeating a request returns a cache hit.
+7. A generated WAV can be downloaded and opened separately.
+8. Invalid requests display useful errors.
+9. Restarting the server does not delete cached audio.
+
+At the end, report:
+
+* exact commands used;
+* Python version;
+* installed Kokoro version;
+* whether `espeak-ng` was required;
+* tested voice IDs;
+* average generation time for one short sentence;
+* all files created;
+* any unresolved issues.
+
+Please update the Kokoro local TTS prototype to support multiple languages instead of English only.
+
+Initially support:
+
+* `en-US` using `KPipeline(lang_code="a")`
+* `en-GB` using `KPipeline(lang_code="b")`
+* `zh-CN` using `KPipeline(lang_code="z")`
+
+Install the required language dependencies, including:
+
+```bash
+pip install "misaki[en]" "misaki[zh]"
+```
+
+Requirements:
+
+1. Add a `language` field to the TTS request.
+2. Maintain one lazily initialized and cached `KPipeline` per language.
+3. Never recreate a pipeline for every request.
+4. Ensure each voice is associated with exactly one compatible language.
+5. Reject mismatched language and voice combinations.
+6. Update `/api/voices` so every voice includes its language.
+7. Update the web page with a language dropdown.
+8. When the language changes, only show compatible voices.
+9. Add at least two verified Mandarin voices and four verified English voices.
+10. Test actual Chinese synthesis with:
+    `我认为四号玩家前后的说法存在矛盾。`
+11. Preserve the existing SHA-256 cache, but include language in the cache key.
+12. Do not add automatic translation.
+13. Do not claim a voice works until playable audio has been generated and checked.
+

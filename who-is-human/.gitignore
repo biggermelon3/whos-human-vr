@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+saves/
+agent-workspace/*/inbox/
+agent-workspace/*/outbox/
+!agent-workspace/.gitkeep
+logs/

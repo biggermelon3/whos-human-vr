@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Generated audio cache (keep the folder, ignore the WAVs)
+generated_audio/*.wav
+generated_audio/*.tmp
+
+# Ad-hoc outputs / logs
+sample*.wav
+smoke_*.wav
+*_out.txt
+*.log
+install_log.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
