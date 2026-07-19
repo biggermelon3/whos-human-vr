@@ -10,6 +10,7 @@ import type {
   TranscriptKind,
 } from "../domain/types.js";
 import type { AgentProvider, DecisionRequest, DecisionResponse, PublicView, SelfView } from "../agents/provider.js";
+import { playGuidance } from "../agents/prompts.js";
 import { t, localizedProfile, llmLanguage, type Locale } from "../i18n/catalog.js";
 import { makeRng, type Rng } from "../util/rng.js";
 import { nextRequestId } from "../util/id.js";
@@ -212,7 +213,7 @@ export class Orchestrator {
         const resp = await this.speak(
           id,
           "DISCUSSION",
-          `Respond to the discussion so far. React to accusations, defend or press a suspect. One or two sentences, in character.`,
+          `Respond to the discussion so far: react to what a specific player just said, defend or press a suspect, or claim/vouch. One or two sentences, on-topic only.`,
           `{ "publicMessage": string, "lynchVoteIntent": ..., "roleBeliefUpdates": [...], "humanBeliefUpdates": [...] }`,
           this.otherLiving(id),
         );
@@ -379,6 +380,7 @@ export class Orchestrator {
       locale: this.locale,
       language: llmLanguage(this.locale),
       self: this.selfView(id),
+      guidance: playGuidance(this.player(id).role),
       publicState: this.publicView(),
       transcript: this.state.transcript.slice(-40),
       options: { livingPlayers: this.living().map((p) => p.id), legalTargets, canAbstain: kind === "LYNCH_VOTE" },
@@ -515,12 +517,11 @@ export class Orchestrator {
       for (const m of Object.values(this.state.minds)) s += m.roleBeliefs[id]?.werewolfProbability ?? 0;
       return s;
     };
+    // EVERY living AI speaks each round (mentioned players first, then most-suspected),
+    // so nobody sits silent.
     const ranked = [...livingAi].sort((a, b) => suspicion(b.id) - suspicion(a.id));
-    for (const p of ranked) {
-      if (chosen.length >= 3) break;
-      if (!chosen.includes(p.id)) chosen.push(p.id);
-    }
-    return chosen.slice(0, 3);
+    for (const p of ranked) if (!chosen.includes(p.id)) chosen.push(p.id);
+    return chosen;
   }
 
   // ── small helpers ──────────────────────────────────────────

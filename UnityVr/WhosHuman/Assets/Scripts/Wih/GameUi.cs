@@ -75,7 +75,7 @@ namespace Wih
         private string _lean = "abstain";
         private bool _recording, _snapBottom, _thinkingOn;
         private string _backend = "demo", _thinkingBase = "";
-        private int _langIndex;
+        private int _langIndex = 1; // default to English (Languages[1]); matches GameClient.locale = "en"
 
         public void Build()
         {

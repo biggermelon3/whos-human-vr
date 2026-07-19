@@ -54,6 +54,9 @@ export interface DecisionRequest {
   publicState: PublicView;
   transcript: TranscriptEntry[];
   options: LegalOptions;
+  // How to play this role well (strategy + table-talk). Read this and follow it —
+  // it matters more than your persona. Same text the api backend puts in its prompt.
+  guidance?: string;
   // kind-specific extras
   seerHistory?: Array<{ round: number; target: PlayerId; reading: SeerReading }>;
   werewolfPartners?: PlayerId[];

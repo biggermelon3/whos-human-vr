@@ -270,6 +270,7 @@ namespace Wih
 
                     Highlight(line.speaker);
                     var src = SpeakerAudio(line.speaker);
+                    StopAllVoice();  // silence anyone still talking → the next speaker never overlaps
                     tts?.Speak(line.speaker ?? "", line.text, src);
                     yield return WaitForLine(line.text, src, gen);
                     Highlight(null);
@@ -291,6 +292,12 @@ namespace Wih
             if (!string.IsNullOrEmpty(speaker) && _avatars.TryGetValue(speaker, out var av) && av.audioSource != null)
                 return av.audioSource;
             return moderatorAudio;
+        }
+
+        private void StopAllVoice()
+        {
+            foreach (var kv in _avatars) kv.Value.StopVoice();
+            if (moderatorAudio != null) moderatorAudio.Stop();
         }
 
         // Parse the victim id from an announcement ("Dawn breaks. A-07 did not survive…"
@@ -330,7 +337,7 @@ namespace Wih
 
             if (useTts)
             {
-                while (t < 3f && !src.isPlaying)   // wait for the fetch to start playback
+                while (t < 8f && !src.isPlaying)   // wait for the (possibly slow) fetch+synthesis to start playback
                 {
                     if (gen != _gen) yield break;
                     t += Time.deltaTime; yield return null;

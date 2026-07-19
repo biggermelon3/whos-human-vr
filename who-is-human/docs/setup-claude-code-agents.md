@@ -28,9 +28,17 @@ answer to `outbox`. The CLI is used as a pure **stdin → stdout transformer**, 
   command differs.
 
 The `inbox/turn-NNN.json` file *is* the full decision request: it contains the
-agent's secret role, its public cover profile, the living players, the recent
-transcript, the legal moves, and a `responseHint` describing the JSON to return.
-It is self-describing — the agent just reads it and answers.
+agent's secret role, a **`guidance`** field (role strategy + how-to-play — the
+same strategy the API backend puts in its system prompt), its public cover
+profile, the living players, the recent transcript, the legal moves, and a
+`responseHint` describing the JSON to return. It is self-describing — the agent
+just reads it and answers.
+
+> **Tell your CLI agents to PLAY, not role-play.** Read + follow the `guidance`
+> field: win the werewolf game (frame, vouch/"金水", pile on/"踩", protect the
+> seer, react to what players actually said). The cover profile is only a voice —
+> agents must NOT keep narrating that they are an "AI agent" or their "function".
+> Reinforce this in `--append-system-prompt` (see below).
 
 > The game randomizes which of the 7 slots is the **human** each match. Start
 > runners for all 7 ids; the one that lands on the human simply never receives

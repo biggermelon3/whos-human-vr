@@ -28,7 +28,7 @@ namespace Wih
 
         [Header("New game defaults")]
         public string backend = "demo";   // demo | api | file
-        public string locale = "";         // empty = let the server decide (WIH_LOCALE); else en|es|zh-CN|ko|hi|fr
+        public string locale = "en";       // en forced by default (the client font is Latin-only); "" = server WIH_LOCALE
         public bool autoStartOnPlay = false; // the START MENU begins the game, not auto-play
 
         /// <summary>Raised on the main thread for every SSE event. Payload is the parsed JSON.</summary>
